@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Module usage example</title>
+</head>
+<body>
+
+<p>Module - is easy and fast JQuery plugin, needed to structure the files in the project,
+    to separate logic from presentation. Convenient for code reuse and team development.
+    Simply create your own modules and use them to create powerful client-side applications</p>
+
+<hr>
+<p>Simple module "hello world" in path "hello/main" run with defaults</p>
+<Br>
+<pre>
+    $('#example1').module('hello/main', {});
+</pre>
+<br>
+<div class="example" id="example1"></div>
+<br>
+<hr>
+
+<p>Simple module "hello world", run with custom parameters</p>
+<br>
+<pre>
+    $('#example2').module('hello/main', {
+        text: 'hello world example',
+        caption: 'Hello world!'
+    });
+</pre>
+
+<div class="example" id="example2"></div>
+
+<br>
+<hr>
+
+<p>This example shows, how to access module methods, and how to use callbacks</p>
+<br>
+<pre>
+    $('#example3').module('hello/main',{
+        onTextAdd: function(){
+            alert('somebody add text?');
+        }
+    });
+
+    setTimeout(function(){
+        $('#example3').module('hello/main').addText('. Added text.');
+    }, 5000);
+</pre>
+
+
+<div class="example" id="example3"></div>
+
+<br>
+<hr>
+
+<p>This example shows, how to integrate one module into another</p>
+<br>
+<pre>
+    $('#example4').module('hello/main', {
+        onInit: function(obj){
+            obj.setText($('&lt;a&gt;&lt;/a&gt;').module('tag/a', {
+                template: 'link. Click me!',
+                onClick: function(){
+                    alert('Ok, you\'ve clicked me');
+                }
+            }));
+        }
+    });
+</pre>
+
+
+<div class="example" id="example4"></div>
+
+
+
+<script src="//code.jquery.com/jquery-2.2.4.min.js"></script>
+<script src="jquery.module.js"></script>
+<script>
+    $(function(){
+
+        //configuration
+        $().module({
+            //path to the modules
+            modPath : '',
+            //console debug log
+            verbose: false
+        });
+
+        $('#example1').module('hello/main', {});
+
+        $('#example2').module('hello/main', {
+            text: 'hello world example',
+            caption: 'Hello world!'
+        });
+
+        $('#example3').module('hello/main',{
+            onTextAdd: function(){
+                alert('somebody add text?');
+            }
+        });
+
+        setTimeout(function(){
+            $('#example3').module('hello/main').addText('. Added text.');
+        }, 5000);
+
+        $('#example4').module('hello/main', {
+            onInit: function(obj){
+                obj.setText($('<a></a>').module('tag/a', {
+                    template: 'link. Click me!',
+                    onClick: function(){
+                        alert('Ok, you\'ve clicked me');
+                    }
+                }));
+            }
+        });
+        
+
+    });
+</script>
+
+</body>
+</html>

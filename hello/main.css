@@ -1,0 +1,13 @@
+.example{
+    border: solid 1px darkgray;
+    padding: 10px;
+}
+
+.text1 {
+    font-size: 20px;
+    color: green;
+}
+
+.text2 {
+    color: red;
+}
