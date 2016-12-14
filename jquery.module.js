@@ -1,5 +1,5 @@
 /**
- * module - jQuery Notification Plugin v 1.0.0
+ * module - jQuery Notification Plugin v 1.0.1
  * Contributors: https://github.com/codeclass/module/graphs/contributors
  *
  * Examples and Documentation - https://github.com/codeclass/module/wiki
@@ -90,7 +90,7 @@
         mod.el=el;
         mod.applyConfig(config);
         mod.render();
-        $(el).data(mod);
+        $.data(el, 'module', mod);
         mod.onInit.fire(mod);
     };
 
@@ -133,6 +133,58 @@
         }
     };
 
+    var produceModule = function(module, config, el){
+
+        log('start produce module', module);
+        cachedGetResource(modConf.modPath + module + '.js', module,  // Call loading module if not loaded yet
+            function (data, name, callback) {   //this function save module object to cache
+                var callbackPass = false;
+                if (modules[name] == undefined) {
+                    var obj = eval(data);
+                    if (obj.constructor != undefined) {
+                        var f = obj.constructor;
+                        //наследуем от базового объекта
+                        //TODO сделать наследование от указанного объекта
+                        f.prototype = Object.create(baseModule.prototype);
+                        //переносим свойства
+                        for (var key in obj) {
+                            f.prototype[key] = obj[key];
+
+                            //асинхронная подгрузка ресурсов и передача defered-колбэка
+
+                            if (key == 'resources' && !$.isEmptyObject(f.prototype[key])) {
+                                loadResourcesAsync(
+                                    f.prototype[key],
+                                    function (data, name, resources_callback) {
+                                        resources[name] = data;
+                                        resources_callback();
+                                    },
+                                    callback
+                                );
+                                callbackPass = true; //теперь инициализация не начнется пока не подгрузятся ресурсы
+                            }
+                            if (key == 'css') {
+                                //подгружаем CSS
+                                $("head").append($("<link rel='stylesheet' href='" + modConf.modPath + f.prototype[key] + "' type='text/css' media='screen' />"));
+                            }
+                        }
+                        f.prototype.module = module;
+
+                        //сохраняем модуль в коллекцию
+                        modules[name] = f;
+                    } else {
+                        log('Module has no constructor', name);
+                    }
+                }
+                if (!callbackPass) {
+                    callback(); //обратный вызов (для завершения deferred)
+                }
+            })
+            .then(function () {
+                init(module, config, el);
+            }); //initiate and render module
+    };
+
 
 
     /**
@@ -152,99 +204,52 @@
             return;
         }
 
+        if(this.length == 1 && typeof config === 'undefined'){ //only object access
+            return $.data(this[0], 'module');
+        }
+
         //var data = this.data();
 
-
-        log('module: ', module);
-
-
-        if(this.length == 1 && this.data().module == module){ //if module initialized
-
-            var obj = this.data();
-
-            if(typeof config === 'object') { //config passed, update config for module
-                obj.applyConfig(config);
-                obj.render();
-            }
-
-            if(typeof config === 'undefined'){ //only object access
-                return obj;
-            }
-
-            if(typeof config === 'string') { //property name passed
-                //get or set property
-                if(typeof value === 'undefined'){
-                    //get property
-                    return obj[config];
-                } else {
-                    //set property
-                    var conf={};
-                    conf[config]=value;
-                    obj.applyConfig(conf);
-                    obj.render();
-                    return this; //for chain
-                }
-            }
-        } else {
-
-            return this.each(function () {
+        return this.each(function () {
                 var el = this;
 
-                if($(this).data().module == module) {
-                    log('module initialazied yet', el);
-                    return false; //
-                }
+                log('module: ', module);
 
-                log('start loading module', module);
-                cachedGetResource(modConf.modPath + module + '.js', module,  // Call loading module if not loaded yet
-                    function (data, name, callback) {   //this function save module object to cache
-                        var callbackPass = false;
-                        if (modules[name] == undefined) {
-                            var obj = eval(data);
-                            if (obj.constructor != undefined) {
-                                var f = obj.constructor;
-                                //наследуем от базового объекта
-                                //TODO сделать наследование от указанного объекта
-                                f.prototype = Object.create(baseModule.prototype);
-                                //переносим свойства
-                                for (var key in obj) {
-                                    f.prototype[key] = obj[key];
+                if($.data(this, 'module') != undefined) {
 
-                                    //асинхронная подгрузка ресурсов и передача defered-колбэка
+                    if($.data(this, 'module').module == module){
 
-                                    if (key == 'resources' && !$.isEmptyObject(f.prototype[key])) {
-                                        loadResourcesAsync(
-                                            f.prototype[key],
-                                            function (data, name, resources_callback) {
-                                                resources[name] = data;
-                                                resources_callback();
-                                            },
-                                            callback
-                                        );
-                                        callbackPass = true; //теперь инициализация не начнется пока не подгрузятся ресурсы
-                                    }
-                                    if (key == 'css') {
-                                        //подгружаем CSS
-                                        $("head").append($("<link rel='stylesheet' href='" + modConf.modPath + f.prototype[key] + "' type='text/css' media='screen' />"));
-                                    }
-                                }
-                                f.prototype.module = module;
+                        var obj = $.data(this, 'module');
 
-                                //сохраняем модуль в коллекцию
-                                modules[name] = f;
+                        if(typeof config === 'object') { //config passed, update config for module
+                            obj.applyConfig(config);
+                            obj.render();
+                            return true;
+                        }
+
+                        if(typeof config === 'string') { //property name passed
+                            //get or set property
+                            if(typeof value === 'undefined'){
+                                //get property
+                                return true;
                             } else {
-                                log('Module has no constructor', name);
+                                //set property
+                                var conf={};
+                                conf[config]=value;
+                                obj.applyConfig(conf);
+                                obj.render();
+                                return true; //for chain
                             }
                         }
-                        if (!callbackPass) {
-                            callback(); //обратный вызов (для завершения deferred)
-                        }
-                    })
-                    .then(function () {
-                        init(module, config, el);
-                    }); //initiate and render module
+                    } else {
+                        log('some other module defined, replacing... ', $.data(this, 'module').module)
+                        produceModule(module, config, el);
+                    }
+                } else {
+                    produceModule(module, config, el);
+                }
 
             });
-        }
+
     };
 })( jQuery );
